@@ -2,15 +2,39 @@ const std = @import("std");
 const vector = @import("vector.zig");
 const ray = @import("ray.zig");
 
+pub fn hit_sphere(center: vector.Vec3, radius: f32, r: ray.Ray) bool {
+    const oc = vector.sub(r.origin, center);
+    const a = vector.dot(r.direction, r.direction);
+    const b = 2.0 * vector.dot(oc, r.direction);
+    const c = vector.dot(oc, oc) - radius * radius;
+    const discriminant = b * b - 4.0 * a * c;
+    return discriminant > 0.0;
+}
+
+// returns a color
 pub fn ray_color(r: ray.Ray) vector.Vec3 {
+    if (hit_sphere(vector.Vec3{ 0, 0, -1 }, 0.5, r)) {
+        return vector.Vec3{ 1, 0, 0 };
+    }
     const unit_d = vector.unit_vector(r.direction);
     const a = 0.5 * (unit_d[1] + 1.0);
     return vector.add(vector.scalar_mul(vector.Vec3{ 1, 1, 1 }, 1.0 - a), vector.scalar_mul(vector.Vec3{ 0.5, 0.7, 1.0 }, a));
 }
 
+pub fn write_color(file: std.fs.File, c: vector.Vec3) !void {
+    const r = c[0];
+    const g = c[1];
+    const b = c[2];
+
+    const rbyte = @as(u8, @intFromFloat(r * 255.0));
+    const gbyte = @as(u8, @intFromFloat(g * 255.0));
+    const bbyte = @as(u8, @intFromFloat(b * 255.0));
+
+    try file.writer().print("{d} {d} {d}\n", .{ rbyte, gbyte, bbyte });
+}
 pub fn main() !void {
     const aspect_ratio = 16.0 / 9.0;
-    const image_width = 1024;
+    const image_width = 512;
     const image_height = @max(@as(u32, @round(@as(f32, @floatFromInt(image_width)) / aspect_ratio)), 1);
 
     // camera settings
@@ -50,7 +74,7 @@ pub fn main() !void {
             };
             const pixel_col = ray_color(r);
 
-            try vector.write_color(file, pixel_col);
+            try write_color(file, pixel_col);
         }
     }
 }

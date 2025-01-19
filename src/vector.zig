@@ -23,18 +23,6 @@ pub inline fn cross(v1: Vec3, v2: Vec3) Vec3 {
     };
 }
 
-pub fn write_color(file: std.fs.File, c: Vec3) !void {
-    const r = c[0];
-    const g = c[1];
-    const b = c[2];
-
-    const rbyte = @as(u8, @intFromFloat(r * 255.0));
-    const gbyte = @as(u8, @intFromFloat(g * 255.0));
-    const bbyte = @as(u8, @intFromFloat(b * 255.0));
-
-    try file.writer().print("{d} {d} {d}\n", .{ rbyte, gbyte, bbyte });
-}
-
 pub inline fn div(v: Vec3, scalar: f32) Vec3 {
     return Vec3{
         v[0] / scalar,
