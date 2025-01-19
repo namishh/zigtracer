@@ -1,14 +1,18 @@
 const std = @import("std");
 const math = std.math;
 
-pub const Vec3 = @Vector(3, f32);
+pub const Vec3 = @Vector(3, f64);
 
-pub inline fn dot(v1: Vec3, v2: Vec3) f32 {
+pub inline fn dot(v1: Vec3, v2: Vec3) f64 {
     return @reduce(.Add, v1 * v2);
 }
 
-pub inline fn len(v: Vec3) f32 {
+pub inline fn len(v: Vec3) f64 {
     return math.sqrt(dot(v, v));
+}
+
+pub inline fn len_squared(v: Vec3) f64 {
+    return v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
 }
 
 pub inline fn unit_vector(v: Vec3) Vec3 {
@@ -23,7 +27,7 @@ pub inline fn cross(v1: Vec3, v2: Vec3) Vec3 {
     };
 }
 
-pub inline fn div(v: Vec3, scalar: f32) Vec3 {
+pub inline fn div(v: Vec3, scalar: f64) Vec3 {
     return Vec3{
         v[0] / scalar,
         v[1] / scalar,
@@ -31,7 +35,7 @@ pub inline fn div(v: Vec3, scalar: f32) Vec3 {
     };
 }
 
-pub inline fn scalar_mul(v: Vec3, scalar: f32) Vec3 {
+pub inline fn scalar_mul(v: Vec3, scalar: f64) Vec3 {
     return Vec3{
         v[0] * scalar,
         v[1] * scalar,

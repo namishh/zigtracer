@@ -1,87 +1,80 @@
 const std = @import("std");
 const vector = @import("vector.zig");
 const ray = @import("ray.zig");
+const H = @import("hittable.zig");
 
-pub fn hit_sphere(center: vector.Vec3, radius: f32, r: ray.Ray) f32 {
-    const oc = vector.sub(r.origin, center);
-    const a = vector.dot(r.direction, r.direction);
-    const b = 2.0 * vector.dot(oc, r.direction);
-    const c = vector.dot(oc, oc) - radius * radius;
-    const discriminant = b * b - 4.0 * a * c;
-
-    if (discriminant < 0.0) {
-        return -1.0;
+pub fn ray_color(r: ray.Ray, world: H.HittableList) vector.Vec3 {
+    var rec = H.HitRecord.init();
+    if (world.hit(r, 0.001, std.math.inf(f32), &rec)) {
+        // Return a color based on the sphere's normal
+        return vector.scalar_mul(vector.add(rec.normal, vector.Vec3{ 1, 1, 1 }), 0.5);
     }
+    const stripe_width = 0.1;
+    const angle = std.math.pi / 4.0;
+    const x = r.direction[0];
+    const y = r.direction[1];
 
-    return (-b - std.math.sqrt(discriminant)) / (2.0 * a);
+    const rotated_x = x * @cos(angle) - y * @sin(angle);
+    const stripe_value = @mod(rotated_x + 10.0, 2.0 * stripe_width);
+
+    if (stripe_value < stripe_width) {
+        return vector.Vec3{ 1.0, 1.0, 1.0 };
+    } else {
+        return vector.Vec3{ 0.0, 0.0, 0.0 };
+    }
 }
 
-// returns a color
-pub fn ray_color(r: ray.Ray) vector.Vec3 {
-    const t = hit_sphere(vector.Vec3{ 0, 0, -1 }, 0.5, r);
-    if (t > 0.0) {
-        const N = vector.unit_vector(vector.sub(r.at(t), vector.Vec3{ 0, 0, -1 }));
-        return vector.scalar_mul(vector.Vec3{ N[0] + 1, N[1] + 1, N[2] + 1 }, 0.5);
-    }
-    const unit_d = vector.unit_vector(r.direction);
-    const a = 0.5 * (unit_d[1] + 1.0);
-    return vector.add(vector.scalar_mul(vector.Vec3{ 1, 1, 1 }, 1.0 - a), vector.scalar_mul(vector.Vec3{ 0.5, 0.7, 1.0 }, a));
-}
+pub fn write_color(file: std.fs.File, pixel_color: vector.Vec3) !void {
+    const r = @max(0.0, @min(1.0, pixel_color[0]));
+    const g = @max(0.0, @min(1.0, pixel_color[1]));
+    const b = @max(0.0, @min(1.0, pixel_color[2]));
 
-pub fn write_color(file: std.fs.File, c: vector.Vec3) !void {
-    const r = c[0];
-    const g = c[1];
-    const b = c[2];
-
-    const rbyte = @as(u8, @intFromFloat(r * 255.0));
-    const gbyte = @as(u8, @intFromFloat(g * 255.0));
-    const bbyte = @as(u8, @intFromFloat(b * 255.0));
+    const rbyte = @as(u8, @intFromFloat(r * 255.999));
+    const gbyte = @as(u8, @intFromFloat(g * 255.999));
+    const bbyte = @as(u8, @intFromFloat(b * 255.999));
 
     try file.writer().print("{d} {d} {d}\n", .{ rbyte, gbyte, bbyte });
 }
-pub fn main() !void {
-    const aspect_ratio = 16.0 / 9.0;
-    const image_width = 512;
-    const image_height = @max(@as(u32, @round(@as(f32, @floatFromInt(image_width)) / aspect_ratio)), 1);
 
-    // camera settings
-    const focal_length = 1.0;
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    const aspect_ratio = 16.0 / 9.0;
+    const image_width = 800;
+    const image_height = @max(@as(u32, @intFromFloat(@as(f32, @floatFromInt(image_width)) / aspect_ratio)), 1);
+
     const viewport_height = 2.0;
     const viewport_width = aspect_ratio * viewport_height;
-    const camera_center = vector.Vec3{ 0, 0, 0 };
+    const focal_length = 1.0;
 
-    // calculate the vectors across the horizontal and down the vertical viewport edges
-    const viewport_u = vector.Vec3{ viewport_width, 0, 0 };
-    const viewport_v = vector.Vec3{ 0, -viewport_height, 0 };
+    const origin = vector.Vec3{ 0, 0, 0 };
+    const horizontal = vector.Vec3{ viewport_width, 0, 0 };
+    const vertical = vector.Vec3{ 0, viewport_height, 0 };
+    const lower_left_corner = vector.sub(vector.sub(vector.sub(origin, vector.div(horizontal, 2.0)), vector.div(vertical, 2.0)), vector.Vec3{ 0, 0, focal_length });
 
-    const pixel_delta_u = vector.div(viewport_u, @as(f32, @floatFromInt(image_width)));
-    const pixel_delta_v = vector.div(viewport_v, @as(f32, @floatFromInt(image_height)));
+    var world = H.HittableList.init(allocator);
+    defer world.deinit();
 
-    const viewport_upper_left = vector.sub(vector.sub(camera_center, vector.Vec3{ 0, 0, focal_length }), vector.add(vector.div(viewport_u, 2.0), vector.div(viewport_v, 2.0)));
-    const pixel00_loc = vector.add(viewport_upper_left, vector.scalar_mul(vector.add(pixel_delta_u, pixel_delta_v), 0.5));
+    const sphere = H.Sphere.init(vector.Vec3{ 0, 0, -1 }, 0.5);
+    try world.add(sphere);
 
-    const file = try std.fs.cwd().createFile(
-        "image.ppm",
-        .{ .read = true },
-    );
+    const file = try std.fs.cwd().createFile("image.ppm", .{});
     defer file.close();
 
-    // ppm header
     try file.writer().print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
 
-    var i: u32 = 0;
-    while (i < image_height) : (i += 1) {
-        var j: u32 = 0;
-        while (j < image_width) : (j += 1) {
-            const pixel_center = vector.add(vector.add(pixel00_loc, vector.scalar_mul(pixel_delta_u, @as(f32, @floatFromInt(j)))), vector.scalar_mul(pixel_delta_v, @as(f32, @floatFromInt(i))));
-            const ray_direction = vector.sub(pixel_center, camera_center);
-            const r = ray.Ray{
-                .origin = camera_center,
-                .direction = ray_direction,
-            };
-            const pixel_col = ray_color(r);
+    for (0..image_height) |j| {
+        for (0..image_width) |i| {
+            const u = @as(f32, @floatFromInt(i)) / (image_width - 1);
+            const v = @as(f32, @floatFromInt(image_height - j - 1)) / (image_height - 1);
 
-            try write_color(file, pixel_col);
+            const direction = vector.add(lower_left_corner, vector.add(vector.scalar_mul(horizontal, u), vector.scalar_mul(vertical, v)));
+            const r = ray.Ray{ .origin = origin, .direction = direction };
+
+            const pixel_color = ray_color(r, world);
+            try write_color(file, pixel_color);
         }
     }
 }
