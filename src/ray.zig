@@ -6,6 +6,6 @@ pub const Ray = struct {
     const Self = @This();
 
     pub fn at(self: Self, t: f32) vector.Vec3 {
-        return self.origin + self.direction * t;
+        return vector.add(self.origin, vector.scalar_mul(self.direction, t));
     }
 };

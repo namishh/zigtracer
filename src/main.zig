@@ -2,19 +2,26 @@ const std = @import("std");
 const vector = @import("vector.zig");
 const ray = @import("ray.zig");
 
-pub fn hit_sphere(center: vector.Vec3, radius: f32, r: ray.Ray) bool {
+pub fn hit_sphere(center: vector.Vec3, radius: f32, r: ray.Ray) f32 {
     const oc = vector.sub(r.origin, center);
     const a = vector.dot(r.direction, r.direction);
     const b = 2.0 * vector.dot(oc, r.direction);
     const c = vector.dot(oc, oc) - radius * radius;
     const discriminant = b * b - 4.0 * a * c;
-    return discriminant > 0.0;
+
+    if (discriminant < 0.0) {
+        return -1.0;
+    }
+
+    return (-b - std.math.sqrt(discriminant)) / (2.0 * a);
 }
 
 // returns a color
 pub fn ray_color(r: ray.Ray) vector.Vec3 {
-    if (hit_sphere(vector.Vec3{ 0, 0, -1 }, 0.5, r)) {
-        return vector.Vec3{ 1, 0, 0 };
+    const t = hit_sphere(vector.Vec3{ 0, 0, -1 }, 0.5, r);
+    if (t > 0.0) {
+        const N = vector.unit_vector(vector.sub(r.at(t), vector.Vec3{ 0, 0, -1 }));
+        return vector.scalar_mul(vector.Vec3{ N[0] + 1, N[1] + 1, N[2] + 1 }, 0.5);
     }
     const unit_d = vector.unit_vector(r.direction);
     const a = 0.5 * (unit_d[1] + 1.0);
