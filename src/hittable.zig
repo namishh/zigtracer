@@ -1,6 +1,7 @@
 const std = @import("std");
 const vector = @import("vector.zig");
 const ray = @import("ray.zig");
+const interval = @import("interval.zig");
 const Vec3 = vector.Vec3;
 const Ray = ray.Ray;
 
@@ -36,7 +37,7 @@ pub const Sphere = struct {
         };
     }
 
-    pub fn hit(self: Sphere, r: Ray, t_min: f64, t_max: f64, rec: *HitRecord) bool {
+    pub fn hit(self: Sphere, r: Ray, t: interval.Interval, rec: *HitRecord) bool {
         const oc = vector.sub(r.origin, self.center);
         const a = vector.len_squared(r.direction);
         const half_b = vector.dot(oc, r.direction);
@@ -46,11 +47,10 @@ pub const Sphere = struct {
         if (discriminant < 0) return false;
         const sqrtd = @sqrt(discriminant);
 
-        // Find the nearest root that lies in the acceptable range
         var root = (-half_b - sqrtd) / a;
-        if (root < t_min or root > t_max) {
+        if (!t.surrounds(root)) {
             root = (-half_b + sqrtd) / a;
-            if (root < t_min or root > t_max) {
+            if (!t.surrounds(root)) {
                 return false;
             }
         }
@@ -83,13 +83,13 @@ pub const HittableList = struct {
         try self.objects.append(object);
     }
 
-    pub fn hit(self: HittableList, r: Ray, t_min: f64, t_max: f64, rec: *HitRecord) bool {
+    pub fn hit(self: HittableList, r: Ray, t: interval.Interval, rec: *HitRecord) bool {
         var temp_rec = HitRecord.init();
         var hit_anything = false;
-        var closest_so_far = t_max;
+        var closest_so_far = t.max;
 
         for (self.objects.items) |object| {
-            if (object.hit(r, t_min, closest_so_far, &temp_rec)) {
+            if (object.hit(r, interval.Interval{ .min = t.min, .max = closest_so_far }, &temp_rec)) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
                 rec.* = temp_rec;

@@ -2,10 +2,11 @@ const std = @import("std");
 const vector = @import("vector.zig");
 const ray = @import("ray.zig");
 const H = @import("hittable.zig");
+const interval = @import("interval.zig");
 
 pub fn ray_color(r: ray.Ray, world: H.HittableList) vector.Vec3 {
     var rec = H.HitRecord.init();
-    if (world.hit(r, 0.001, std.math.inf(f32), &rec)) {
+    if (world.hit(r, interval.Interval{ .min = 0.001, .max = std.math.inf(f64) }, &rec)) {
         // Return a color based on the sphere's normal
         return vector.scalar_mul(vector.add(rec.normal, vector.Vec3{ 1, 1, 1 }), 0.5);
     }
