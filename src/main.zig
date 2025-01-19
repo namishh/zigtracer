@@ -9,7 +9,7 @@ pub fn ray_color(r: ray.Ray, world: H.HittableList) vector.Vec3 {
         // Return a color based on the sphere's normal
         return vector.scalar_mul(vector.add(rec.normal, vector.Vec3{ 1, 1, 1 }), 0.5);
     }
-    const stripe_width = 0.1;
+    const stripe_width = 0.08;
     const angle = std.math.pi / 4.0;
     const x = r.direction[0];
     const y = r.direction[1];
