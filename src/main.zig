@@ -11,11 +11,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var cam = camera.Camera{
-        .fov = 45,
-        .look_from = vector.Vec3{ 0, 0, 2 },
-        .look_at = vector.Vec3{ 0, 0, -1 },
-    };
+    var cam = camera.Camera{ .fov = 45, .look_from = vector.Vec3{ 0, 0, 2 }, .look_at = vector.Vec3{ 0, 0, -1 }, .defocus_angle = 0.0, .defocus_distance = 3.4 };
     cam.initialise();
 
     var world = H.HittableList.init(allocator);
@@ -42,7 +38,7 @@ pub fn main() !void {
         .dielectric = material.Dielectric.init(1.5),
     };
 
-    const sphere_left = H.Sphere.init(vector.Vec3{ -1.38, 0.12, -1 }, 0.45, sphere_left_mat);
+    const sphere_left = H.Sphere.init(vector.Vec3{ -1.38, 0.11, -1 }, 0.45, sphere_left_mat);
     const sphere_upperleft = H.Sphere.init(vector.Vec3{ -1.38, 0.75, -0.95 }, 0.25, sphere_upperleft_mat);
     const sphere = H.Sphere.init(vector.Vec3{ 0.37, 0, -1 }, 0.35, sphere_mat);
     const sphere2 = H.Sphere.init(vector.Vec3{ -0.43, 0, -1 }, 0.35, sphere2_mat);

@@ -119,7 +119,6 @@ pub const GradientMaterial = struct {
             vector.scalar_mul(self.color2, t),
         );
 
-        // Scatter the ray in a random direction (or any direction you prefer)
         const scatter_direction = vector.add(rec.normal, vector.randomUnitVector());
         scattered.* = Ray{ .origin = rec.p, .direction = scatter_direction };
 
