@@ -69,7 +69,7 @@ pub fn sample_square() vector.Vec3 {
 
 pub const Camera = struct {
     aspect_ratio: f32 = 16.0 / 9.0,
-    image_width: u32 = 300,
+    image_width: u32 = 960,
     samples_per_pixel: f32 = 100,
     max_depth: u32 = 50,
     fov: u32 = 20,
