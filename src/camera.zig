@@ -46,18 +46,20 @@ pub fn ray_color(r: ray.Ray, depth: u32, world: *const H.HittableList) vector.Ve
             return vector.Vec3{ 0, 0, 0 };
         }
     }
-    const stripe_width = 0.08;
-    const angle = std.math.pi / 4.0;
     const x = r.direction[0];
     const y = r.direction[1];
 
-    const rotated_x = x * @cos(angle) - y * @sin(angle);
-    const stripe_value = @mod(rotated_x + 10.0, 2.0 * stripe_width);
+    const rotated_x = x * @cos(std.math.pi / 4.0) - y * @sin(std.math.pi / 4.0);
+    const rotated_y = x * @sin(std.math.pi / 4.0) + y * @cos(std.math.pi / 4.0);
 
-    if (stripe_value < stripe_width) {
-        return vector.Vec3{ 1.0, 1.0, 1.0 };
+    const cell_size = 0.1;
+    const cell_x = @floor(rotated_x / cell_size);
+    const cell_y = @floor(rotated_y / cell_size);
+
+    if (@mod(cell_x + cell_y, 2) == 0) {
+        return vector.Vec3{ 0.98, 0.98, 0.98 }; // White
     } else {
-        return vector.Vec3{ 0.0, 0.0, 0.0 };
+        return vector.Vec3{ 0.02, 0.02, 0.02 }; // Black
     }
 }
 
@@ -67,9 +69,17 @@ pub fn sample_square() vector.Vec3 {
 
 pub const Camera = struct {
     aspect_ratio: f32 = 16.0 / 9.0,
-    image_width: u32 = 800,
+    image_width: u32 = 300,
     samples_per_pixel: f32 = 100,
     max_depth: u32 = 50,
+    fov: u32 = 20,
+    look_from: vector.Vec3 = vector.Vec3{ 0, 0, 1 },
+    look_at: vector.Vec3 = vector.Vec3{ 0, 0, -1 },
+    vup: vector.Vec3 = vector.Vec3{ 0, 1, 0 },
+    u: vector.Vec3 = vector.Vec3{ 0, 0, 0 },
+    v: vector.Vec3 = vector.Vec3{ 0, 0, 0 },
+    w: vector.Vec3 = vector.Vec3{ 0, 0, 0 },
+
     image_height: u32 = undefined,
     center: vector.Vec3 = undefined,
     pixel00_loc: vector.Vec3 = undefined,
@@ -80,19 +90,28 @@ pub const Camera = struct {
     pub fn initialise(self: *Camera) void {
         self.image_height = @max(@as(u32, @intFromFloat(@as(f32, @floatFromInt(self.image_width)) / self.aspect_ratio)), 1);
         self.pixel_samples_scale = 1.0 / self.samples_per_pixel;
-        self.center = vector.Vec3{ 0, 0, 0 };
+        self.center = self.look_from;
 
-        const focal_length = 1.0;
-        const viewport_height = 2.0;
+        const focal_length = vector.len(vector.sub(self.look_from, self.look_at));
+        const theta = std.math.degreesToRadians(@as(f32, @floatFromInt(self.fov)));
+        const h = std.math.tan(theta / 2.0);
+
+        const viewport_height = 2.0 * h * focal_length;
         const viewport_width = viewport_height * (@as(f32, @floatFromInt(self.image_width)) / @as(f32, @floatFromInt(self.image_height)));
 
-        const viewport_u = vector.Vec3{ viewport_width, 0, 0 };
-        const viewport_v = vector.Vec3{ 0, -viewport_height, 0 };
+        self.w = vector.unit_vector(vector.sub(self.look_from, self.look_at));
+        self.u = vector.unit_vector(vector.cross(self.vup, self.w));
+        self.v = vector.cross(self.w, self.u);
+
+        const viewport_u = vector.scalar_mul(self.u, viewport_width);
+        const viewport_v = vector.scalar_mul(vector.negative(self.v), viewport_height);
 
         self.pixel_delta_u = vector.div(viewport_u, @as(f32, @floatFromInt(self.image_width)));
         self.pixel_delta_v = vector.div(viewport_v, @as(f32, @floatFromInt(self.image_height)));
 
-        const viewport_upper_left = vector.sub(vector.sub(self.center, vector.Vec3{ 0, 0, focal_length }), vector.div(vector.add(viewport_u, viewport_v), 2.0));
+        //         auto viewport_upper_left = center - (focal_length * w) - viewport_u/2 - viewport_v/2;
+
+        const viewport_upper_left = vector.sub(vector.sub(self.center, vector.scalar_mul(self.w, focal_length)), vector.div(vector.add(viewport_u, viewport_v), 2.0));
         self.pixel00_loc = vector.add(viewport_upper_left, vector.div(vector.add(self.pixel_delta_u, self.pixel_delta_v), 2.0));
     }
 

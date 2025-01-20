@@ -17,12 +17,14 @@ pub const Material = union(enum) {
     lambertian: Lambertian,
     metal: Metal,
     dielectric: Dielectric,
+    gradient: GradientMaterial,
 
     pub fn scatter(self: Material, r_in: Ray, rec: HitRecord, attenuation: *Vec3, scattered: *Ray) bool {
         return switch (self) {
             .lambertian => |lambertian| lambertian.scatter(rec, attenuation, scattered),
             .metal => |metal| metal.scatter(r_in, rec, attenuation, scattered),
             .dielectric => |dielectric| dielectric.scatter(r_in, rec, attenuation, scattered),
+            .gradient => |gradient| gradient.scatter(r_in, rec, attenuation, scattered),
         };
     }
 };
@@ -58,14 +60,14 @@ pub const Dielectric = struct {
         const ri = if (rec.front_face) 1.0 / self.refractive_index else self.refractive_index;
         const unit_direction = vector.unit_vector(r_in.direction);
 
-        const cos_theta = @min(vector.dot(-unit_direction, rec.normal), 1.0);
+        const cos_theta = @min(vector.dot(vector.negative(unit_direction), rec.normal), 1.0);
         const sin_theta = @sqrt(1.0 - cos_theta * cos_theta);
 
         var direction = Vec3{ 0, 0, 0 };
 
         const cannot_refract = ri * sin_theta > 1.0;
 
-        if (cannot_refract or reflectance(cos_theta, ri) > 0.5) {
+        if (cannot_refract or reflectance(cos_theta, ri) > vector.randomDouble()) {
             direction = vector.reflect(unit_direction, rec.normal);
         } else {
             direction = vector.refract(unit_direction, rec.normal, ri);
@@ -97,5 +99,30 @@ pub const Metal = struct {
         attenuation.* = self.albedo;
 
         return vector.dot(scattered.direction, rec.normal) > 0;
+    }
+};
+
+pub const GradientMaterial = struct {
+    color1: Vec3,
+    color2: Vec3,
+
+    pub fn init(color1: Vec3, color2: Vec3) GradientMaterial {
+        return .{ .color1 = color1, .color2 = color2 };
+    }
+
+    pub fn scatter(self: GradientMaterial, r_in: Ray, rec: HitRecord, attenuation: *Vec3, scattered: *Ray) bool {
+        // Calculate the interpolation factor based on the ray's y-direction
+        const t = 0.5 * (1.0 + r_in.direction[1]);
+
+        attenuation.* = vector.add(
+            vector.scalar_mul(self.color1, 1.0 - t),
+            vector.scalar_mul(self.color2, t),
+        );
+
+        // Scatter the ray in a random direction (or any direction you prefer)
+        const scatter_direction = vector.add(rec.normal, vector.randomUnitVector());
+        scattered.* = Ray{ .origin = rec.p, .direction = scatter_direction };
+
+        return true;
     }
 };
