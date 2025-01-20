@@ -22,7 +22,7 @@ pub fn main() !void {
     // const avatar_body = H.Sphere.init(vector.Vec3{ 0, -2, -1 }, 1.2);
 
     const sphere_mat = material.Material{
-        .metal = material.Metal.init(vector.Vec3{ 0.8, 0.8, 0.8 }, 0),
+        .dielectric = material.Dielectric.init(1.0 / 1.33),
     };
     const ground_mat = material.Material{ .lambertian = material.Lambertian.init(vector.Vec3{ 0.15, 0.15, 0.15 }) };
 

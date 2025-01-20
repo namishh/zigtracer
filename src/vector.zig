@@ -119,3 +119,10 @@ pub inline fn near_zero(v: Vec3) bool {
     const s = 1e-8;
     return @abs(v[0]) < s and @abs(v[1]) < s and @abs(v[2]) < s;
 }
+
+pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) Vec3 {
+    const cos_theta = @min(dot(scalar_mul(uv, -1), n), 1.0);
+    const r_out_perp = scalar_mul(add(uv, scalar_mul(n, cos_theta)), etai_over_etat);
+    const r_out_parallel = scalar_mul(n, -@sqrt(@abs(1.0 - len_squared(r_out_perp))));
+    return add(r_out_perp, r_out_parallel);
+}
