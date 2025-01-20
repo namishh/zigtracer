@@ -4,14 +4,22 @@ const ray = @import("ray.zig");
 const interval = @import("interval.zig");
 const H = @import("hittable.zig");
 
+pub fn randomDouble() f64 {
+    const rand = std.crypto.random;
+    const a = rand.float(f64);
+    return a;
+}
+
 pub fn write_color(file: std.fs.File, pixel_color: vector.Vec3) !void {
     const r = @max(0.0, @min(1.0, pixel_color[0]));
     const g = @max(0.0, @min(1.0, pixel_color[1]));
     const b = @max(0.0, @min(1.0, pixel_color[2]));
 
-    const rbyte = @as(u8, @intFromFloat(r * 255.999));
-    const gbyte = @as(u8, @intFromFloat(g * 255.999));
-    const bbyte = @as(u8, @intFromFloat(b * 255.999));
+    const intensity = interval.Interval{ .min = 0.0, .max = 0.999 };
+
+    const rbyte = @as(u8, @intFromFloat(intensity.clamp(r) * 256));
+    const gbyte = @as(u8, @intFromFloat(intensity.clamp(g) * 256));
+    const bbyte = @as(u8, @intFromFloat(intensity.clamp(b) * 256));
 
     try file.writer().print("{d} {d} {d}\n", .{ rbyte, gbyte, bbyte });
 }
@@ -36,18 +44,24 @@ pub fn ray_color(r: ray.Ray, world: *const H.HittableList) vector.Vec3 {
     }
 }
 
+pub fn sample_square() vector.Vec3 {
+    return vector.Vec3{ randomDouble() - 0.5, randomDouble() - 0.5, 0.0 };
+}
+
 pub const Camera = struct {
     aspect_ratio: f64 = 16.0 / 9.0,
-    image_width: u32 = 512,
+    image_width: u32 = 800,
+    samples_per_pixel: f64 = 100,
     image_height: u32 = undefined,
     center: vector.Vec3 = undefined,
     pixel00_loc: vector.Vec3 = undefined,
     pixel_delta_u: vector.Vec3 = undefined,
     pixel_delta_v: vector.Vec3 = undefined,
+    pixel_samples_scale: f64 = undefined,
 
     pub fn initialise(self: *Camera) void {
         self.image_height = @max(@as(u32, @intFromFloat(@as(f32, @floatFromInt(self.image_width)) / self.aspect_ratio)), 1);
-
+        self.pixel_samples_scale = 1.0 / self.samples_per_pixel;
         self.center = vector.Vec3{ 0, 0, 0 };
 
         const focal_length = 1.0;
@@ -73,15 +87,24 @@ pub const Camera = struct {
 
         for (0..self.image_height) |j| {
             for (0..self.image_width) |i| {
-                const uscaled = vector.scalar_mul(self.pixel_delta_u, @as(f64, @floatFromInt(i)));
-                const vscaled = vector.scalar_mul(self.pixel_delta_v, @as(f64, @floatFromInt(j)));
-                const pixel_center = vector.add(self.pixel00_loc, vector.add(uscaled, vscaled));
-                const ray_direction = vector.sub(pixel_center, self.center);
-                const r = ray.Ray{ .origin = self.center, .direction = ray_direction };
-
-                const pixel_color = ray_color(r, world);
-                try write_color(file, pixel_color);
+                var pixel_color = vector.Vec3{ 0, 0, 0 };
+                for (0..@intFromFloat(self.samples_per_pixel)) |_| {
+                    const r = self.get_ray(i, j);
+                    pixel_color = vector.add(pixel_color, ray_color(r, world));
+                }
+                try write_color(file, vector.scalar_mul(pixel_color, self.pixel_samples_scale));
             }
         }
+    }
+
+    pub fn get_ray(self: *Camera, i: usize, j: usize) ray.Ray {
+        const offset = sample_square();
+        const t1 = vector.scalar_mul(self.pixel_delta_u, @as(f64, @floatFromInt(i)) + offset[0]);
+        const t2 = vector.scalar_mul(self.pixel_delta_v, @as(f64, @floatFromInt(j)) + offset[1]);
+        const pixel_center = vector.add(self.pixel00_loc, vector.add(t1, t2));
+
+        const ray_origin = self.center;
+        const ray_direction = vector.sub(pixel_center, ray_origin);
+        return ray.Ray{ .origin = ray_origin, .direction = ray_direction };
     }
 };
