@@ -39,15 +39,24 @@ pub const Lambertian = struct {
 
 pub const Metal = struct {
     albedo: Vec3,
+    fuzz: f32,
 
-    pub fn init(albedo: Vec3) Metal {
-        return .{ .albedo = albedo };
+    pub fn init(albedo: Vec3, fuzz: f32) Metal {
+        return .{
+            .albedo = albedo,
+            .fuzz = if (fuzz < 1) fuzz else 1,
+        };
     }
 
     pub fn scatter(self: Metal, r_in: Ray, rec: HitRecord, attenuation: *Vec3, scattered: *Ray) bool {
         const reflected = vector.reflect(r_in.direction, rec.normal);
-        scattered.* = Ray{ .origin = rec.p, .direction = reflected };
+        const fuzzed_reflected = vector.add(
+            vector.unit_vector(reflected),
+            vector.scalar_mul(vector.randomUnitVector(), self.fuzz),
+        );
+        scattered.* = Ray{ .origin = rec.p, .direction = fuzzed_reflected };
         attenuation.* = self.albedo;
-        return true;
+
+        return vector.dot(scattered.direction, rec.normal) > 0;
     }
 };

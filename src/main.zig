@@ -21,7 +21,9 @@ pub fn main() !void {
     // const avatar_head = H.Sphere.init(vector.Vec3{ 0, 0, -1 }, 0.5);
     // const avatar_body = H.Sphere.init(vector.Vec3{ 0, -2, -1 }, 1.2);
 
-    const sphere_mat = material.Material{ .metal = material.Metal.init(vector.Vec3{ 0.8, 0.8, 0.8 }) };
+    const sphere_mat = material.Material{
+        .metal = material.Metal.init(vector.Vec3{ 0.8, 0.8, 0.8 }, 0),
+    };
     const ground_mat = material.Material{ .lambertian = material.Lambertian.init(vector.Vec3{ 0.15, 0.15, 0.15 }) };
 
     const sphere = H.Sphere.init(vector.Vec3{ 0, 0, -1 }, 0.5, sphere_mat);
