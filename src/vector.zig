@@ -110,3 +110,12 @@ pub inline fn negative(v: Vec3) Vec3 {
         -v[2],
     };
 }
+
+pub inline fn reflect(v: Vec3, n: Vec3) Vec3 {
+    return sub(v, scalar_mul(n, 2.0 * dot(v, n)));
+}
+
+pub inline fn near_zero(v: Vec3) bool {
+    const s = 1e-8;
+    return @abs(v[0]) < s and @abs(v[1]) < s and @abs(v[2]) < s;
+}

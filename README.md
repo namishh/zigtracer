@@ -6,4 +6,4 @@ orignal book in cpp -
 checkout all the renders in /renders folder
 <samp>
 
-![img](https://raw.githubusercontent.com/namishh/zigtracer/refs/heads/master/renders/ball-w-stripes.png)
+![img](https://raw.githubusercontent.com/namishh/zigtracer/refs/heads/master/renders/purely-metal-ball.png)

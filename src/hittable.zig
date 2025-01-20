@@ -2,6 +2,7 @@ const std = @import("std");
 const vector = @import("vector.zig");
 const ray = @import("ray.zig");
 const interval = @import("interval.zig");
+const material = @import("material.zig");
 const Vec3 = vector.Vec3;
 const Ray = ray.Ray;
 
@@ -9,6 +10,7 @@ pub const HitRecord = struct {
     p: Vec3,
     normal: Vec3,
     t: f32,
+    mat: material.Material = undefined,
     front_face: bool,
 
     pub fn init() HitRecord {
@@ -29,11 +31,13 @@ pub const HitRecord = struct {
 pub const Sphere = struct {
     center: Vec3,
     radius: f32,
+    mat: material.Material,
 
-    pub fn init(center: Vec3, radius: f32) Sphere {
+    pub fn init(center: Vec3, radius: f32, mat: material.Material) Sphere {
         return .{
             .center = center,
             .radius = radius,
+            .mat = mat,
         };
     }
 
@@ -59,7 +63,7 @@ pub const Sphere = struct {
         rec.p = r.at(rec.t);
         const outward_normal = vector.div(vector.sub(rec.p, self.center), self.radius);
         rec.set_face_normal(r, outward_normal);
-
+        rec.mat = self.mat;
         return true;
     }
 };

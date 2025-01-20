@@ -36,8 +36,15 @@ pub fn ray_color(r: ray.Ray, depth: u32, world: *const H.HittableList) vector.Ve
 
     var rec = H.HitRecord.init();
     if (world.hit(r, interval.Interval{ .min = 0.001, .max = std.math.inf(f32) }, &rec)) {
-        const direction = vector.add(rec.normal, vector.randomUnitVector());
-        return vector.scalar_mul(ray_color(ray.Ray{ .origin = rec.p, .direction = direction }, depth - 1, world), 0.1);
+        // const direction = vector.add(rec.normal, vector.randomUnitVector());
+        // return vector.scalar_mul(ray_color(ray.Ray{ .origin = rec.p, .direction = direction }, depth - 1, world), 0.1);
+        var scatterd = ray.Ray{ .direction = vector.Vec3{ 0, 0, 0 }, .origin = vector.Vec3{ 0, 0, 0 } };
+        var attenuation = vector.Vec3{ 0, 0, 0 };
+        if (rec.mat.scatter(r, rec, &attenuation, &scatterd)) {
+            return vector.mul(ray_color(scatterd, depth - 1, world), attenuation);
+        } else {
+            return vector.Vec3{ 0, 0, 0 };
+        }
     }
     const stripe_width = 0.08;
     const angle = std.math.pi / 4.0;
@@ -60,7 +67,7 @@ pub fn sample_square() vector.Vec3 {
 
 pub const Camera = struct {
     aspect_ratio: f32 = 16.0 / 9.0,
-    image_width: u32 = 1024,
+    image_width: u32 = 800,
     samples_per_pixel: f32 = 100,
     max_depth: u32 = 50,
     image_height: u32 = undefined,
