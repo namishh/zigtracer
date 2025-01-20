@@ -5,7 +5,7 @@ pub const Ray = struct {
     direction: vector.Vec3,
     const Self = @This();
 
-    pub fn at(self: Self, t: f64) vector.Vec3 {
+    pub fn at(self: Self, t: f32) vector.Vec3 {
         return vector.add(self.origin, vector.scalar_mul(self.direction, t));
     }
 };

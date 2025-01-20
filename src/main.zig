@@ -17,7 +17,9 @@ pub fn main() !void {
     defer world.deinit();
 
     const sphere = H.Sphere.init(vector.Vec3{ 0, 0, -1 }, 0.5);
+    const ground = H.Sphere.init(vector.Vec3{ 0, -100.5, -1 }, 100);
     try world.add(sphere);
+    try world.add(ground);
 
     try cam.render(&world);
 }

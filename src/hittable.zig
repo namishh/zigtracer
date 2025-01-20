@@ -8,7 +8,7 @@ const Ray = ray.Ray;
 pub const HitRecord = struct {
     p: Vec3,
     normal: Vec3,
-    t: f64,
+    t: f32,
     front_face: bool,
 
     pub fn init() HitRecord {
@@ -28,9 +28,9 @@ pub const HitRecord = struct {
 
 pub const Sphere = struct {
     center: Vec3,
-    radius: f64,
+    radius: f32,
 
-    pub fn init(center: Vec3, radius: f64) Sphere {
+    pub fn init(center: Vec3, radius: f32) Sphere {
         return .{
             .center = center,
             .radius = radius,
